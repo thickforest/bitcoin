@@ -1152,9 +1152,9 @@ void MapPort(bool /* unused fMapPort */)
 
 
 static const char *strDNSSeed[] = {
-    "bitseed.xf2.org",
-    "bitseed.bitcoin.org.uk",
-    "dnsseed.bluematt.me",
+    //"bitseed.xf2.org",
+    //"bitseed.bitcoin.org.uk",
+    //"dnsseed.bluematt.me",
 };
 
 void DNSAddressSeed()
@@ -1703,8 +1703,8 @@ void StartNode(void* parg)
         MapPort(fUseUPnP);
 
     // Get addresses from IRC and advertise ours
-    if (!CreateThread(ThreadIRCSeed, NULL))
-        printf("Error: CreateThread(ThreadIRCSeed) failed\n");
+    //if (!CreateThread(ThreadIRCSeed, NULL))
+        //printf("Error: CreateThread(ThreadIRCSeed) failed\n");
 
     // Send and receive from sockets, accept connections
     CreateThread(ThreadSocketHandler, NULL, true);

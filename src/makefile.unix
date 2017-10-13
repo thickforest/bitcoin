@@ -30,14 +30,14 @@ endif
 
 LIBS+= \
  -Wl,-Bdynamic \
-   -l gthread-2.0 \
    -l z \
    -l dl \
    -l pthread
 
 
 DEBUGFLAGS=-g -D__WXDEBUG__
-CXXFLAGS=-O2 -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS)
+#CXXFLAGS=-O2 -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS)
+CXXFLAGS=-Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS)
 HEADERS = \
     base58.h \
     bignum.h \
@@ -79,7 +79,7 @@ OBJS= \
     cryptopp/obj/cpu.o
 
 
-all: bitcoin
+all: bitcoin bitcoind
 
 
 obj/%.o: %.cpp $(HEADERS)

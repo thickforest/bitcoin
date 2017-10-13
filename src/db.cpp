@@ -711,6 +711,7 @@ int CWalletDB::LoadWallet(CWallet* pwallet)
                 string strAddress;
                 ssKey >> strAddress;
                 ssValue >> pwallet->mapAddressBook[strAddress];
+                printf("wallet:%s value:%s\n", strAddress.c_str(), pwallet->mapAddressBook[strAddress].c_str());
             }
             else if (strType == "tx")
             {

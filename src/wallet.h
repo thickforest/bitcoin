@@ -203,9 +203,10 @@ public:
 
 class CReserveKey
 {
+public:
+    int64 nIndex;
 protected:
     CWallet* pwallet;
-    int64 nIndex;
     std::vector<unsigned char> vchPubKey;
 public:
     CReserveKey(CWallet* pwalletIn)

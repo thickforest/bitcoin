@@ -538,7 +538,7 @@ int CMerkleTx::GetBlocksToMaturity() const
 {
     if (!IsCoinBase())
         return 0;
-    return max(0, (COINBASE_MATURITY+20) - GetDepthInMainChain());
+    return max(0, (COINBASE_MATURITY+5) - GetDepthInMainChain());
 }
 
 
@@ -728,6 +728,7 @@ int GetTotalBlocksEstimate()
 
 bool IsInitialBlockDownload()
 {
+    //printf("pindexBest=%d nBestHeight=%d GetTotalBlocksEstimate()=%d nInitialBlockThreshold=%d\n", pindexBest, nBestHeight, GetTotalBlocksEstimate(), nInitialBlockThreshold);
     if (pindexBest == NULL || nBestHeight < (GetTotalBlocksEstimate()-nInitialBlockThreshold))
         return true;
     static int64 nLastUpdate;
@@ -737,6 +738,7 @@ bool IsInitialBlockDownload()
         pindexLastBest = pindexBest;
         nLastUpdate = GetTime();
     }
+    //printf("GetTime()=%d nLastUpdate=%d pindexBest->GetBlockTime()=%d\n", GetTime(), nLastUpdate, pindexBest->GetBlockTime());
     return (GetTime() - nLastUpdate < 10 &&
             pindexBest->GetBlockTime() < GetTime() - 24 * 60 * 60);
 }
@@ -1328,6 +1330,7 @@ bool CBlock::AcceptBlock()
 
 bool static ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
+    printf("in ProcessBlock --------\n");
     // Check for duplicate
     uint256 hash = pblock->GetHash();
     if (mapBlockIndex.count(hash))
@@ -1450,8 +1453,9 @@ bool LoadBlockIndex(bool fAllowNew)
 {
     if (fTestNet)
     {
-        hashGenesisBlock = uint256("0x00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008");
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 28);
+        //hashGenesisBlock = uint256("0x00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008");
+        hashGenesisBlock = uint256("0x00000041445be7fa98ad65d6433ceb76df45c1fbc47e4eeb588e144e38113928");
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 24);
         pchMessageStart[0] = 0xfa;
         pchMessageStart[1] = 0xbf;
         pchMessageStart[2] = 0xb5;
@@ -1501,9 +1505,17 @@ bool LoadBlockIndex(bool fAllowNew)
         if (fTestNet)
         {
             block.nTime    = 1296688602;
-            block.nBits    = 0x1d07fff8;
-            block.nNonce   = 384568319;
+            //block.nBits    = 0x1d07fff8;
+            block.nBits    = 0x1d7efff8;
+            //block.nNonce   = 384568319;
+            block.nNonce   = 872945;
         }
+	/*
+        for(unsigned int i=0; i<=0xffffffff; i++) {
+            block.nNonce   = i;
+            printf("%u, %s\n", i, block.GetHash().ToString().c_str());
+        }
+	*/
 
         //// debug print
         printf("%s\n", block.GetHash().ToString().c_str());
@@ -2654,6 +2666,7 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
 {
     CBlockIndex* pindexPrev = pindexBest;
 
+
     // Create new block
     auto_ptr<CBlock> pblock(new CBlock());
     if (!pblock.get())
@@ -2664,7 +2677,9 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
     txNew.vin.resize(1);
     txNew.vin[0].prevout.SetNull();
     txNew.vout.resize(1);
+
     txNew.vout[0].scriptPubKey << reservekey.GetReservedKey() << OP_CHECKSIG;
+    printf("CreateNewBlock with address:%s reservekey->nIndex:%d\n", CBitcoinAddress(reservekey.GetReservedKey()).ToString().c_str(), reservekey.nIndex);
 
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(txNew);

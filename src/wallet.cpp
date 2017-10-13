@@ -967,7 +967,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64> >& vecSend, CW
 
                 // Fill vin
                 BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
-                    wtxNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second));
+                    wtxNew.vin.push_back(CTxIn(coin.first->GetHash(), coin.second));
 
                 // Sign
                 int nIn = 0;
@@ -1208,10 +1208,12 @@ bool GetWalletFile(CWallet* pwallet, string &strWalletFileOut)
 
 bool CWallet::TopUpKeyPool()
 {
+    printf("in TopUpKeyPool()\n");
     CRITICAL_BLOCK(cs_wallet)
     {
         if (IsLocked())
             return false;
+        printf("in TopUpKeyPool(): real process\n");
 
         CWalletDB walletdb(strWalletFile);
 

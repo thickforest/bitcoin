@@ -102,6 +102,7 @@ class Miner:
 		targetbin = targetstr.decode('hex')
 		targetbin = targetbin[::-1]	# byte-swap and dword-swap
 		targetbin_str = targetbin.encode('hex')
+		#print 'Target:', targetbin_str
 		target = long(targetbin_str, 16)
 
 		# pre-hash first 76b of block header
@@ -124,7 +125,9 @@ class Miner:
 			hash = hash_o.digest()
 
 			# quick test for winning solution: high 32 bits zero?
-			if hash[-4:] != '\0\0\0\0':
+			#if hash[-4:] != '\0\0\0\0':
+			#if hash[-2:] != '\0\0':
+			if hash[-3:] != '\0\0\0':
 				continue
 
 			# convert binary hash to 256-bit Python long
@@ -140,7 +143,7 @@ class Miner:
 				return (nonce + 1, nonce_bin)
 			else:
 				print time.asctime(), "PROOF-OF-WORK false positive %064x" % (l,)
-#				return (nonce + 1, nonce_bin)
+				return (nonce + 1, nonce_bin)
 
 		return (nonce + 1, None)
 

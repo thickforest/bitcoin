@@ -74,7 +74,8 @@ void PrintConsole(const char* format, ...)
 
 int64 AmountFromValue(const Value& value)
 {
-    double dAmount = value.get_real();
+    //double dAmount = value.get_real();
+    double dAmount = value.get_uint64();
     if (dAmount <= 0.0 || dAmount > 21000000.0)
         throw JSONRPCError(-3, "Invalid amount");
     int64 nAmount = roundint64(dAmount * COIN);
@@ -782,10 +783,12 @@ Value sendfrom(const Array& params, bool fHelp)
 
     // Check funds
     int64 nBalance = GetAccountBalance(strAccount, nMinDepth);
+    printf("%s has %d, pay %d\n", strAccount.c_str(), nBalance, nAmount);
     if (nAmount > nBalance)
         throw JSONRPCError(-6, "Account has insufficient funds");
 
     // Send
+    printf("pwalletMain->SendMoneyToBitcoinAddress(%s, %d)\n", address.ToString().c_str(), nAmount);
     string strError = pwalletMain->SendMoneyToBitcoinAddress(address, nAmount, wtx);
     if (strError != "")
         throw JSONRPCError(-4, strError);
@@ -995,6 +998,56 @@ Value listreceivedbyaccount(const Array& params, bool fHelp)
             "  \"confirmations\" : number of confirmations of the most recent transaction included");
 
     return ListReceived(params, true);
+}
+
+Value ListMined(const Array& params, bool fByAccounts)
+{
+    // Minimum confirmations
+    int nMinDepth = 1;
+    if (params.size() > 0)
+        nMinDepth = params[0].get_int();
+
+    // Whether to include empty accounts
+    bool fIncludeEmpty = false;
+    if (params.size() > 1)
+        fIncludeEmpty = params[1].get_bool();
+
+    Array ret;
+    map<CBitcoinAddress, tallyitem> mapTally;
+    for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
+    {
+        const CWalletTx& wtx = (*it).second;
+        if (wtx.IsCoinBase() || !wtx.IsFinal()) {
+            BOOST_FOREACH(const CTxOut& txout, wtx.vout) {
+                CBitcoinAddress address;
+                if (!ExtractAddress(txout.scriptPubKey, pwalletMain, address) || !address.IsValid())
+                    continue;
+                printf("%s mined %d\n", address.ToString().c_str(), txout.nValue/COIN);
+                Object obj;
+                obj.push_back(Pair("address",       address.ToString()));
+                obj.push_back(Pair("amount",        ValueFromAmount(txout.nValue)));
+                ret.push_back(obj);
+            }
+        }
+
+    }
+    return ret;
+}
+
+Value listmined(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 2)
+        throw runtime_error(
+            "listreceivedbyaddress [minconf=1] [includeempty=false]\n"
+            "[minconf] is the minimum number of confirmations before payments are included.\n"
+            "[includeempty] whether to include addresses that haven't received any payments.\n"
+            "Returns an array of objects containing:\n"
+            "  \"address\" : receiving address\n"
+            "  \"account\" : the account of the receiving address\n"
+            "  \"amount\" : total amount received by the address\n"
+            "  \"confirmations\" : number of confirmations of the most recent transaction included");
+
+    return ListMined(params, false);
 }
 
 void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDepth, bool fLong, Array& ret)
@@ -1492,8 +1545,8 @@ Value getwork(const Array& params, bool fHelp)
             "  \"target\" : little endian hash target\n"
             "If [data] is specified, tries to solve the block and returns true if it was successful.");
 
-    if (vNodes.empty())
-        throw JSONRPCError(-9, "Bitcoin is not connected!");
+    //if (vNodes.empty())
+        //throw JSONRPCError(-9, "Bitcoin is not connected!");
 
     if (IsInitialBlockDownload())
         throw JSONRPCError(-10, "Bitcoin is downloading blocks...");
@@ -1526,6 +1579,7 @@ Value getwork(const Array& params, bool fHelp)
 
             // Create new block
             pblock = CreateNewBlock(reservekey);
+            printf("pblock=%p\n", pblock);
             if (!pblock)
                 throw JSONRPCError(-7, "Out of memory");
             vNewBlock.push_back(pblock);
@@ -1549,6 +1603,7 @@ Value getwork(const Array& params, bool fHelp)
         char phash1[64];
         FormatHashBuffers(pblock, pmidstate, pdata, phash1);
 
+        printf("pblock->nBits=%ld\n", pblock->nBits);
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
         Object result;
@@ -1571,8 +1626,11 @@ Value getwork(const Array& params, bool fHelp)
             ((unsigned int*)pdata)[i] = CryptoPP::ByteReverse(((unsigned int*)pdata)[i]);
 
         // Get saved block
-        if (!mapNewBlock.count(pdata->hashMerkleRoot))
+	printf("this hashMerkleRoot=%s nNonce=%u\n", pdata->hashMerkleRoot.ToString().c_str(), pdata->nNonce);
+        if (!mapNewBlock.count(pdata->hashMerkleRoot)) {
+	    printf("too late");
             return false;
+	}
         CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot].first;
         unsigned int nExtraNonce = mapNewBlock[pdata->hashMerkleRoot].second;
 
@@ -1628,6 +1686,7 @@ pair<string, rpcfn_type> pCallTable[] =
     make_pair("listreceivedbyaddress",  &listreceivedbyaddress),
     make_pair("listreceivedbyaccount",  &listreceivedbyaccount),
     make_pair("listreceivedbylabel",    &listreceivedbyaccount), // deprecated
+    make_pair("listmined",              &listmined),
     make_pair("backupwallet",           &backupwallet),
     make_pair("keypoolrefill",          &keypoolrefill),
     make_pair("walletpassphrase",       &walletpassphrase),
@@ -2302,6 +2361,7 @@ int CommandLineRPC(int argc, char *argv[])
         if (strMethod == "listreceivedbyaccount"  && n > 1) ConvertTo<bool>(params[1]);
         if (strMethod == "listreceivedbylabel"    && n > 0) ConvertTo<boost::int64_t>(params[0]); // deprecated
         if (strMethod == "listreceivedbylabel"    && n > 1) ConvertTo<bool>(params[1]); // deprecated
+        if (strMethod == "listmined"              && n > 1) ConvertTo<boost::int64_t>(params[1]);
         if (strMethod == "getbalance"             && n > 1) ConvertTo<boost::int64_t>(params[1]);
         if (strMethod == "move"                   && n > 2) ConvertTo<double>(params[2]);
         if (strMethod == "move"                   && n > 3) ConvertTo<boost::int64_t>(params[3]);

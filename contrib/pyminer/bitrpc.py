@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# pip install python-bitcoindrpc
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import sys
 import string
